@@ -1,9 +1,8 @@
 #!/bin/sh
-set -e
 
 echo "=== LAUNCHPAD STARTUP ==="
 echo "Running Prisma db push to sync schema..."
-npx prisma db push --skip-generate 2>&1 || echo "WARNING: prisma db push failed, continuing..."
+node ./node_modules/prisma/build/index.js db push --skip-generate 2>&1 || echo "WARNING: prisma db push failed, continuing..."
 
 echo "Starting Next.js server..."
 exec node server.js
