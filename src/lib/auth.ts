@@ -22,9 +22,9 @@ export const authOptions: NextAuthOptions = {
   },
 
   pages: {
-    signIn: '/auth/signin',
-    error: '/auth/error',
-    newUser: '/onboarding',
+    signIn: '/login',
+    error: '/login',
+    newUser: '/dashboard',
   },
 
   providers: [
