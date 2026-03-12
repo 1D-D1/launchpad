@@ -14,6 +14,7 @@ const PUBLIC_PATHS = [
   '/login',
   '/register',
   '/api/health',
+  '/api/seed',
 ];
 
 /** Path prefixes that do not require authentication. */
