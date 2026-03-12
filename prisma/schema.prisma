@@ -1,0 +1,429 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  name         String?
+  passwordHash String?
+  role         Role       @default(MANAGER)
+  projects     Project[]
+  sessions     Session[]
+  accounts     Account[]
+  auditLogs    AuditLog[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  VIEWER
+}
+
+model Project {
+  id             String              @id @default(cuid())
+  name           String
+  description    String
+  vertical       String
+  targetAudience Json
+  budget         Json
+  objectives     Json
+  competitors    Json?
+  assets         Asset[]
+  status         ProjectStatus       @default(DRAFT)
+  pipelineStatus Json?
+  userId         String
+  user           User                @relation(fields: [userId], references: [id])
+  analyses       CompetitiveAnalysis[]
+  strategies     Strategy[]
+  contents       Content[]
+  campaigns      AdCampaign[]
+  emailSequences EmailSequence[]
+  pipelineJobs   PipelineJob[]
+  stripeData     StripeProject?
+  blogPosts      BlogPost[]
+  keywords       KeywordStrategy[]
+  seoAudits      SeoAudit[]
+  socialPosts    SocialPost[]
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+}
+
+enum ProjectStatus {
+  DRAFT
+  SUBMITTED
+  ANALYZING
+  STRATEGIZING
+  GENERATING_CONTENT
+  PUBLISHING
+  RUNNING_ADS
+  EMAILING
+  ACTIVE
+  PAUSED
+  COMPLETED
+}
+
+model CompetitiveAnalysis {
+  id             String   @id @default(cuid())
+  projectId      String
+  project        Project  @relation(fields: [projectId], references: [id])
+  competitorName String
+  competitorUrl  String?
+  serpData       Json?
+  socialData     Json?
+  adsData        Json?
+  websiteData    Json?
+  strengths      Json?
+  weaknesses     Json?
+  score          Float?
+  fullReport     String?  @db.Text
+  createdAt      DateTime @default(now())
+}
+
+model Strategy {
+  id           String   @id @default(cuid())
+  projectId    String
+  project      Project  @relation(fields: [projectId], references: [id])
+  positioning  String?  @db.Text
+  messaging    Json?
+  channels     Json?
+  calendar     Json?
+  personas     Json?
+  valueProps   Json?
+  angles       Json?
+  fullDocument String?  @db.Text
+  approved     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+}
+
+model Content {
+  id           String        @id @default(cuid())
+  projectId    String
+  project      Project       @relation(fields: [projectId], references: [id])
+  type         ContentType
+  platform     Platform?
+  title        String?
+  body         String        @db.Text
+  bodyVariantB String?       @db.Text
+  visualPrompt String?
+  visualUrl    String?
+  scheduledAt  DateTime?
+  publishedAt  DateTime?
+  status       ContentStatus @default(DRAFT)
+  metrics      Json?
+  externalId   String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+enum ContentType {
+  SOCIAL_POST
+  AD_COPY
+  EMAIL
+  LANDING_PAGE
+  BLOG_POST
+}
+
+enum Platform {
+  FACEBOOK
+  INSTAGRAM
+  LINKEDIN
+  TWITTER
+  TIKTOK
+  GOOGLE
+  EMAIL
+}
+
+enum ContentStatus {
+  DRAFT
+  PENDING_REVIEW
+  APPROVED
+  SCHEDULED
+  PUBLISHED
+  FAILED
+}
+
+model AdCampaign {
+  id           String   @id @default(cuid())
+  projectId    String
+  project      Project  @relation(fields: [projectId], references: [id])
+  platform     Platform
+  externalId   String?
+  name         String
+  objective    String
+  budget       Float
+  budgetType   String
+  targeting    Json
+  creatives    Json
+  status       String   @default("DRAFT")
+  metrics      Json?
+  autoOptimize Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model EmailSequence {
+  id        String      @id @default(cuid())
+  projectId String
+  project   Project     @relation(fields: [projectId], references: [id])
+  name      String
+  steps     EmailStep[]
+  leads     Lead[]
+  status    String      @default("DRAFT")
+  metrics   Json?
+  createdAt DateTime    @default(now())
+}
+
+model EmailStep {
+  id         String        @id @default(cuid())
+  sequenceId String
+  sequence   EmailSequence @relation(fields: [sequenceId], references: [id])
+  order      Int
+  subject    String
+  body       String        @db.Text
+  delayHours Int
+  condition  String?
+  createdAt  DateTime      @default(now())
+}
+
+model Lead {
+  id             String         @id @default(cuid())
+  sequenceId     String?
+  sequence       EmailSequence? @relation(fields: [sequenceId], references: [id])
+  email          String
+  firstName      String?
+  lastName       String?
+  company        String?
+  jobTitle       String?
+  linkedinUrl    String?
+  phone          String?
+  enrichmentData Json?
+  emailVerified  Boolean        @default(false)
+  status         LeadStatus     @default(NEW)
+  events         LeadEvent[]
+  optedOut       Boolean        @default(false)
+  createdAt      DateTime       @default(now())
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  OPENED
+  CLICKED
+  REPLIED
+  INTERESTED
+  NOT_INTERESTED
+  BOUNCED
+  OPTED_OUT
+}
+
+model LeadEvent {
+  id        String   @id @default(cuid())
+  leadId    String
+  lead      Lead     @relation(fields: [leadId], references: [id])
+  type      String
+  metadata  Json?
+  createdAt DateTime @default(now())
+}
+
+model Asset {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id])
+  filename  String
+  url       String
+  mimeType  String
+  size      Int
+  createdAt DateTime @default(now())
+}
+
+model PipelineJob {
+  id          String    @id @default(cuid())
+  projectId   String
+  project     Project   @relation(fields: [projectId], references: [id])
+  stage       String
+  status      String    @default("PENDING")
+  bullJobId   String?
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(3)
+  error       String?   @db.Text
+  result      Json?
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+}
+
+model StripeProject {
+  id                   String   @id @default(cuid())
+  projectId            String   @unique
+  project              Project  @relation(fields: [projectId], references: [id])
+  stripeCustomerId     String?
+  stripeProductId      String?
+  stripePriceId        String?
+  stripeSubscriptionId String?
+  checkoutUrl          String?
+  status               String   @default("PENDING")
+  revenue              Float    @default(0)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  action    String
+  resource  String
+  details   Json?
+  ip        String?
+  createdAt DateTime @default(now())
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  expires      DateTime
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  user              User    @relation(fields: [userId], references: [id])
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+
+  @@unique([provider, providerAccountId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ---------------------------------------------------------------------------
+// SEO Engine Models
+// ---------------------------------------------------------------------------
+
+model BlogPost {
+  id              String        @id @default(cuid())
+  projectId       String
+  project         Project       @relation(fields: [projectId], references: [id])
+  title           String
+  slug            String
+  metaTitle       String?
+  metaDescription String?
+  content         String        @db.Text
+  excerpt         String?       @db.Text
+  targetKeyword   String
+  secondaryKeywords Json?       // string[]
+  internalLinks   Json?         // {url: string, anchor: string, targetPostId?: string}[]
+  externalLinks   Json?         // {url: string, anchor: string}[]
+  wordCount       Int           @default(0)
+  readingTime     Int           @default(0) // minutes
+  seoScore        Float?        // 0-100
+  geoScore        Float?        // 0-100 (Generative Engine Optimization score)
+  status          ContentStatus @default(DRAFT)
+  publishedAt     DateTime?
+  scheduledAt     DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@unique([projectId, slug])
+}
+
+model KeywordStrategy {
+  id             String   @id @default(cuid())
+  projectId      String
+  project        Project  @relation(fields: [projectId], references: [id])
+  keyword        String
+  searchVolume   Int?
+  difficulty     Float?   // 0-100
+  intent         String?  // informational, transactional, navigational, commercial
+  cluster        String?  // thematic cluster name
+  priority       Int      @default(0) // higher = more important
+  assignedPostId String?  // which blog post targets this keyword
+  position       Int?     // current SERP position if known
+  createdAt      DateTime @default(now())
+
+  @@unique([projectId, keyword])
+}
+
+model SeoAudit {
+  id                String   @id @default(cuid())
+  projectId         String
+  project           Project  @relation(fields: [projectId], references: [id])
+  overallScore      Float    // 0-100
+  geoReadiness      Float    // 0-100
+  internalLinkScore Float    // 0-100
+  contentCoverage   Float    // 0-100 (% of keywords covered)
+  recommendations   Json     // string[]
+  details           Json     // full audit data
+  createdAt         DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Social Media Content Engine Models
+// ---------------------------------------------------------------------------
+
+model SocialPost {
+  id              String         @id @default(cuid())
+  projectId       String
+  project         Project        @relation(fields: [projectId], references: [id])
+  platform        Platform
+  postType        SocialPostType
+  caption         String         @db.Text
+  captionVariantB String?        @db.Text
+  hashtags        Json?          // string[]
+
+  // Carousel data
+  carouselSlides  Json?          // {slideNumber: number, headline: string, body: string, visualPrompt: string}[]
+
+  // Infographic data
+  infographicData Json?          // {title: string, sections: {heading: string, stat: string, description: string}[], colorScheme: string}
+
+  // Visual assets
+  visualPrompt    String?        @db.Text  // prompt for AI image generation
+  visualUrl       String?                  // uploaded/generated image URL
+
+  // Scheduling
+  bestTimeToPost  String?        // "Tuesday 10:00 AM"
+  scheduledAt     DateTime?
+  publishedAt     DateTime?
+
+  // Metrics
+  status          ContentStatus  @default(DRAFT)
+  externalId      String?
+  metrics         Json?          // {reach, impressions, likes, comments, shares, saves, clicks}
+
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+}
+
+enum SocialPostType {
+  SINGLE_IMAGE
+  CAROUSEL
+  INFOGRAPHIC
+  TEXT_ONLY
+  VIDEO_SCRIPT
+  STORY
+  REEL_SCRIPT
+}
