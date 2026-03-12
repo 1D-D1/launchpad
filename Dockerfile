@@ -37,13 +37,22 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
+# Copy Prisma CLI for db push at startup
+COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
+COPY --from=builder /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
+
 # Copy worker files (BullMQ workers need to be available)
 COPY --from=builder /app/node_modules/bullmq ./node_modules/bullmq
 COPY --from=builder /app/node_modules/ioredis ./node_modules/ioredis
 
+# Copy startup script
+COPY scripts/start.sh ./start.sh
+RUN chmod +x ./start.sh
+
+# Switch to non-root user
 USER nextjs
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-CMD ["node", "server.js"]
+CMD ["./start.sh"]
