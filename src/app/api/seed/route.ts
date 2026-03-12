@@ -2,7 +2,17 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/server/db/prisma';
 import bcrypt from 'bcryptjs';
 
+export const dynamic = 'force-dynamic';
+
+export async function GET(request: Request) {
+  return handleSeed(request);
+}
+
 export async function POST(request: Request) {
+  return handleSeed(request);
+}
+
+async function handleSeed(request: Request) {
   // Security: require NEXTAUTH_SECRET as bearer token
   const authHeader = request.headers.get('authorization');
   const expectedToken = process.env.NEXTAUTH_SECRET;
